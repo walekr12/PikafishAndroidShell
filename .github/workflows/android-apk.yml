@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -51,8 +54,21 @@ jobs:
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon
 
+      - name: Prepare release APK
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/debug/app-debug.apk release/pikafish-android-debug.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: pikafish-android-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: release/pikafish-android-debug.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-apk-${{ github.run_number }}
+          name: Pikafish Android APK ${{ github.run_number }}
+          body: Debug APK built by GitHub Actions.
+          files: release/pikafish-android-debug.apk
