@@ -1,0 +1,58 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout shell
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Install Android NDK
+        run: |
+          NDKV="27.2.12479018"
+          sdkmanager "ndk;$NDKV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDKV" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/ndk/$NDKV/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Clone Pikafish
+        run: git clone --depth 1 https://github.com/official-pikafish/Pikafish.git third_party/Pikafish
+
+      - name: Build Pikafish engine for Android
+        working-directory: third_party/Pikafish/src
+        run: |
+          make net
+          make -j"$(nproc)" build ARCH=armv8 COMP=ndk EXE=libpikafish.so LDFLAGS="-static -Wno-unused-command-line-argument"
+          make strip EXE=libpikafish.so
+          mkdir -p ../../../app/src/main/jniLibs/arm64-v8a
+          mkdir -p ../../../app/src/main/assets/engine
+          cp libpikafish.so ../../../app/src/main/jniLibs/arm64-v8a/libpikafish.so
+          cp pikafish.nnue ../../../app/src/main/assets/engine/pikafish.nnue
+
+      - name: Assemble debug APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pikafish-android-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
