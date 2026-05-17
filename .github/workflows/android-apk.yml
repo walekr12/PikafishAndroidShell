@@ -45,7 +45,7 @@ jobs:
         run: |
           make net
           make -j"$(nproc)" build ARCH=armv8 COMP=ndk EXE=libpikafish.so LDFLAGS="-static -Wno-unused-command-line-argument"
-          make strip EXE=libpikafish.so
+          make strip ARCH=armv8 COMP=ndk EXE=libpikafish.so
           mkdir -p ../../../app/src/main/jniLibs/arm64-v8a
           mkdir -p ../../../app/src/main/assets/engine
           cp libpikafish.so ../../../app/src/main/jniLibs/arm64-v8a/libpikafish.so
